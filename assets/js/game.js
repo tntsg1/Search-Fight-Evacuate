@@ -135,16 +135,258 @@ hud.credits.textContent = credits;
 /* ======= Worlds ======= */
 const baseWorld={w:1600,h:900}, baseCam={x:800,y:450};
 const baseZones={ armory:{x:350,y:450,r:90,label:'Armory'}, warehouse:{x:800,y:450,r:90,label:'Warehouse'}, runway:{x:1250,y:450,r:110,label:'Runway'} };
-const baseObstacles=(()=>{const a=[]; for(let i=0;i<22;i++) a.push({x:rand(120,baseWorld.w-120),y:rand(120,baseWorld.h-120),r:rand(30,70)}); return a;})();
+const baseObstacles=(()=>{const a=[]; for(let i=0;i<22;i++) a.push({type:'circle',x:rand(120,baseWorld.w-120),y:rand(120,baseWorld.h-120),r:rand(30,70)}); return a;})();
 const world={w:3400,h:3400}, cam={x:1700,y:1700};
-let obstacles=(function(){ const a=[]; for(let i=0;i<120;i++) a.push({x:rand(260,world.w-260),y:rand(260,world.h-260),r:rand(40,140)}); return a;})();
+const baseCityTerrain=createCityTerrain();
+let obstacles=baseCityTerrain.map(o=>({...o}));
+const exfilSpots=[
+  {x:520,y:560,r:100},
+  {x:1820,y:1840,r:110},
+  {x:2620,y:1760,r:120},
+  {x:2620,y:2960,r:130},
+  {x:820,y:3000,r:120},
+];
 function circleHit(ax,ay,ar,bx,by,br){ return (ax-bx)*(ax-bx)+(ay-by)*(ay-by) <= (ar+br)*(ar+br); }
+function obstacleHitCircle(x,y,r,ob){
+  if(ob.type==='circle'){ return circleHit(x,y,r,ob.x,ob.y,ob.r); }
+  if(ob.type==='rect'){
+    const hx=ob.w/2, hy=ob.h/2;
+    const nearestX=clamp(x, ob.x-hx, ob.x+hx);
+    const nearestY=clamp(y, ob.y-hy, ob.y+hy);
+    const dx=x-nearestX, dy=y-nearestY;
+    return dx*dx+dy*dy <= r*r;
+  }
+  return false;
+}
 function collideWithObstacles(o, obs, W,H){
-  for(const ob of obs){ const dx=o.x-ob.x, dy=o.y-ob.y, d=Math.hypot(dx,dy);
-    if(d < o.r+ob.r){ const ov=o.r+ob.r-d, nx=(dx/(d||1)), ny=(dy/(d||1)); o.x += nx*(ov+0.5); o.y += ny*(ov+0.5); }
+  for(const ob of obs){
+    if(ob.type==='circle'){
+      const dx=o.x-ob.x, dy=o.y-ob.y, d=Math.hypot(dx,dy);
+      const sum=o.r+ob.r;
+      if(d < sum){ const ov=sum-d, nx=(dx/(d||1)), ny=(dy/(d||1)); o.x += nx*(ov+0.5); o.y += ny*(ov+0.5); }
+    } else if(ob.type==='rect'){
+      const hx=ob.w/2, hy=ob.h/2;
+      const nearestX=clamp(o.x, ob.x-hx, ob.x+hx);
+      const nearestY=clamp(o.y, ob.y-hy, ob.y+hy);
+      const dx=o.x-nearestX, dy=o.y-nearestY;
+      const dist2=dx*dx+dy*dy;
+      if(dist2 < o.r*o.r){
+        const dist=Math.sqrt(dist2)||0;
+        const overlap=o.r-dist;
+        let nx, ny;
+        if(dist===0){
+          if(Math.abs(o.x-ob.x) > Math.abs(o.y-ob.y)){ nx=o.x>ob.x?1:-1; ny=0; }
+          else { ny=o.y>ob.y?1:-1; nx=0; }
+        }else{
+          nx=dx/dist; ny=dy/dist;
+        }
+        o.x += nx*(overlap+0.5);
+        o.y += ny*(overlap+0.5);
+      }
+    }
   }
   o.x=clamp(o.x,o.r,W-o.r); o.y=clamp(o.y,o.r,H-o.r);
 }
+function createCityTerrain(){
+  const arr=[];
+  const addRect=(x,y,w,h,variant='residential')=>arr.push({type:'rect',x,y,w,h,variant});
+  const addCircle=(x,y,r,variant='ruin')=>arr.push({type:'circle',x,y,r,variant});
+
+  // 北部住宅区：低矮楼体 + 围墙庭院
+  addRect(780, 620, 320, 220, 'residential');
+  addRect(1140, 620, 320, 220, 'residential');
+  addRect(1500, 620, 320, 220, 'residential');
+  addRect(960, 880, 620, 70, 'fence');
+  addRect(780, 980, 300, 200, 'residential');
+  addRect(1140, 980, 300, 200, 'residential');
+  addRect(1500, 980, 300, 200, 'residential');
+  addRect(960, 1140, 620, 70, 'fence');
+  addRect(630, 940, 70, 420, 'wall');
+  addRect(1690, 940, 70, 420, 'wall');
+
+  // 中央废墟广场：坍塌建筑和焦黑残骸
+  addCircle(1880, 1380, 170, 'ruin');
+  addCircle(1700, 1540, 110, 'ruin');
+  addCircle(2060, 1540, 130, 'ruin');
+
+  // 西侧街区围墙，形成城市巷道
+  addRect(520, 1500, 420, 70, 'wall');
+  addRect(520, 1820, 420, 70, 'wall');
+  addRect(320, 1660, 70, 420, 'wall');
+  addCircle(640, 1700, 90, 'ruin');
+
+  // 南部住宅与庭院
+  addRect(780, 2320, 320, 240, 'residential');
+  addRect(1140, 2320, 320, 240, 'residential');
+  addRect(780, 2660, 320, 240, 'residential');
+  addRect(1140, 2700, 320, 260, 'residential');
+  addRect(960, 2500, 620, 80, 'fence');
+  addCircle(620, 2460, 110, 'ruin');
+
+  // 巷战走廊：双排高墙与拦阻物
+  addRect(1660, 2140, 70, 700, 'wall');
+  addRect(1920, 2140, 70, 700, 'wall');
+  addRect(1790, 2140, 260, 60, 'wall');
+  addRect(1670, 2380, 180, 60, 'wall');
+  addRect(1910, 2560, 180, 60, 'wall');
+  addCircle(1790, 2300, 90, 'ruin');
+  addCircle(1790, 2600, 120, 'ruin');
+
+  // 市区核心：密集楼体 + 围栏
+  addRect(2200, 2200, 320, 240, 'residential');
+  addRect(2200, 1880, 320, 180, 'residential');
+  addRect(2200, 1680, 320, 120, 'fence');
+  addRect(2380, 2080, 70, 320, 'wall');
+  addRect(2020, 2080, 70, 320, 'wall');
+
+  // 东北塔楼区：高层与连廊
+  addRect(2480, 760, 420, 320, 'tower');
+  addRect(2900, 720, 340, 360, 'tower');
+  addRect(2700, 1080, 520, 80, 'fence');
+  addCircle(2680, 620, 90, 'ruin');
+  addCircle(3160, 780, 120, 'ruin');
+
+  // 东南仓储 / 工业区
+  addRect(2600, 2320, 460, 260, 'warehouse');
+  addRect(3080, 2320, 360, 260, 'warehouse');
+  addRect(2840, 2660, 620, 110, 'wall');
+  addRect(2840, 2020, 620, 110, 'wall');
+  addCircle(2600, 2000, 120, 'ruin');
+  addCircle(3100, 2000, 130, 'ruin');
+
+  // 边缘废墟覆盖
+  addCircle(400, 360, 110, 'ruin');
+  addCircle(3200, 360, 140, 'ruin');
+  addCircle(400, 3200, 150, 'ruin');
+  addCircle(3200, 3200, 170, 'ruin');
+
+  return arr;
+}
+const terrainStyles={
+  residential:{
+    fill:'rgba(13,19,38,0.92)',
+    stroke:'rgba(0,247,255,0.36)',
+    accent:'rgba(0,247,255,0.14)',
+    glow:22,
+    bandSpacing:26,
+    bandColor:'rgba(0,247,255,0.2)',
+    split:{step:72,color:'rgba(0,247,255,0.18)',alpha:0.6}
+  },
+  fence:{
+    fill:'rgba(6,12,20,0.55)',
+    stroke:'rgba(104,248,167,0.7)',
+    glow:16,
+    dash:true,
+    fillAlpha:0.7
+  },
+  wall:{
+    fill:'rgba(8,14,24,0.85)',
+    stroke:'rgba(104,248,167,0.55)',
+    glow:18,
+    lineWidth:3
+  },
+  tower:{
+    fill:'rgba(18,10,38,0.95)',
+    stroke:'rgba(255,28,247,0.55)',
+    glow:28,
+    bandSpacing:22,
+    bandColor:'rgba(255,28,247,0.28)',
+    accent:'rgba(255,28,247,0.18)'
+  },
+  warehouse:{
+    fill:'rgba(16,18,28,0.94)',
+    stroke:'rgba(255,209,102,0.5)',
+    glow:24,
+    bandSpacing:26,
+    bandColor:'rgba(255,209,102,0.25)',
+    accent:'rgba(255,209,102,0.18)'
+  },
+  ruin:{
+    fill:'rgba(255,157,102,0.26)',
+    stroke:'rgba(255,209,102,0.62)',
+    glow:24,
+    accent:'rgba(255,209,102,0.3)'
+  }
+};
+terrainStyles.defaultRect=terrainStyles.residential;
+function drawRectObstacle(o){
+  const style=terrainStyles[o.variant]||terrainStyles.defaultRect;
+  ctx.save();
+  ctx.translate(o.x,o.y);
+  const w=o.w, h=o.h;
+  ctx.shadowColor=style.stroke||'#00f7ff';
+  ctx.shadowBlur=style.glow??18;
+  ctx.fillStyle=style.fill||'rgba(13,19,38,0.9)';
+  ctx.globalAlpha=style.fillAlpha??1;
+  ctx.beginPath();
+  ctx.rect(-w/2,-h/2,w,h);
+  ctx.fill();
+  ctx.globalAlpha=1;
+  if(style.stroke){
+    if(style.dash) ctx.setLineDash([14,9]);
+    ctx.lineWidth=style.lineWidth||2;
+    ctx.strokeStyle=style.stroke;
+    ctx.stroke();
+    if(style.dash) ctx.setLineDash([]);
+  }
+  if(style.accent){
+    const inset=Math.min(16, Math.min(w,h)/5);
+    ctx.globalAlpha=0.7;
+    ctx.lineWidth=1;
+    ctx.strokeStyle=style.accent;
+    ctx.strokeRect(-w/2+inset, -h/2+inset, w-2*inset, h-2*inset);
+    ctx.globalAlpha=1;
+  }
+  if(style.bandSpacing && style.bandColor){
+    ctx.save();
+    ctx.translate(-w/2,-h/2);
+    ctx.strokeStyle=style.bandColor;
+    ctx.lineWidth=1;
+    for(let y=style.bandSpacing; y<h-10; y+=style.bandSpacing){
+      ctx.beginPath();
+      ctx.moveTo(8,y);
+      ctx.lineTo(w-8,y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if(style.split){
+    ctx.save();
+    ctx.translate(-w/2,-h/2);
+    ctx.strokeStyle=style.split.color;
+    ctx.globalAlpha=style.split.alpha??0.5;
+    ctx.lineWidth=1;
+    for(let x=style.split.step; x<w-10; x+=style.split.step){
+      ctx.beginPath();
+      ctx.moveTo(x,8);
+      ctx.lineTo(x,h-8);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawCircleObstacle(o){
+  const style=terrainStyles[o.variant]||terrainStyles.ruin||{stroke:'#2246ff',fill:'rgba(34,70,255,0.12)',glow:16};
+  ctx.save();
+  ctx.shadowBlur=style.glow??18;
+  ctx.shadowColor=style.stroke||'#ffd166';
+  ctx.fillStyle=style.fill||'rgba(255,209,102,0.22)';
+  ctx.beginPath();
+  ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
+  ctx.fill();
+  if(style.stroke){ ctx.lineWidth=2; ctx.strokeStyle=style.stroke; ctx.stroke(); }
+  if(style.accent){
+    ctx.globalAlpha=0.6;
+    ctx.lineWidth=1;
+    ctx.strokeStyle=style.accent;
+    ctx.beginPath();
+    ctx.arc(o.x,o.y,o.r*0.55,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawObstacle(o){ if(o.type==='rect') drawRectObstacle(o); else drawCircleObstacle(o); }
 
 /* ======= Factions & Exfil ======= */
 const factions=[
@@ -152,7 +394,7 @@ const factions=[
   {id:1,name:'Magenta',color:'#ff1cf7',spawn:{x:3000,y:520}},
   {id:2,name:'Amber',color:'#ffd166',spawn:{x:3000,y:3000}},
 ];
-let exfil={x:380,y:600,r:90};
+let exfil={...exfilSpots[0]};
 
 /* ======= Player & Inventory ======= */
 const rarColors={common:'#b7c2d1',uncommon:'#68f8a7',rare:'#45c7ff',epic:'#ff84ff',legendary:'#ffd166'};
@@ -355,8 +597,9 @@ function startPreflight(){
 }
 function resetBattlefield(){
   lootBags.length=0; enemies.length=0;
-  exfil.x = randi(200, world.w-200); exfil.y = randi(200, world.h-200);
-  obstacles=(function(){ const a=[]; for(let i=0;i<120;i++) a.push({x:rand(260,world.w-260),y:rand(260,world.h-260),r:rand(40,140)}); return a;})();
+  const spot = choice(exfilSpots);
+  exfil.x = spot.x; exfil.y = spot.y; exfil.r = spot.r;
+  obstacles = baseCityTerrain.map(o=>({...o}));
   const squadsPerFaction = 4;
   for(const f of factions){
     for(let s=0;s<squadsPerFaction;s++){
@@ -592,7 +835,7 @@ function updateCombat(now,dt){
   // Bullets
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i]; b.x+=b.vx; b.y+=b.vy; b.life--;
-    for(const o of obstacles){ if(circleHit(b.x,b.y,b.r,o.x,o.y,o.r)){ b.life=0; break; } }
+    for(const o of obstacles){ if(obstacleHitCircle(b.x,b.y,b.r,o)){ b.life=0; break; } }
     if(b.life<=0 || b.x<0||b.y<0||b.x>world.w||b.y>world.h){ bullets.splice(i,1); continue; }
     if(b.team===-1){
       for(let j=enemies.length-1;j>=0;j--){
@@ -772,7 +1015,7 @@ function renderCombat(now,dt){
   let ox=0, oy=0; if(shakeT>0){ const s=shakeMag*(shakeT/200); ox=(Math.random()-0.5)*s; oy=(Math.random()-0.5)*s; }
   ctx.translate(Math.round(W/2 - cam.x + ox), Math.round(H/2 - cam.y + oy));
 
-  for(const o of obstacles){ neonCircle(o.x,o.y,o.r,'#2246ff',0.06,10); }
+  for(const o of obstacles){ drawObstacle(o); }
   for(const f of factions){ neonCircle(f.spawn.x,f.spawn.y, 90, f.color, 0.06, 12); }
   neonCircle(exfil.x,exfil.y, exfil.r, '#68f8a7', 0.08, 18);
   if(extractHold>0){
