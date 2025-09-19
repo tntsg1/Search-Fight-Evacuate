@@ -878,21 +878,34 @@ function resetBattlefield(config){
     f.spawn = {...base};
   });
   const squads = config && config.squads ? config.squads : {};
-  const squadsPerFaction = squads.perFaction ?? 4;
   const spread = squads.spread ?? 200;
-  const sizeMin = (squads.size && squads.size[0]) ?? 3;
-  const sizeMax = (squads.size && squads.size[1]) ?? 6;
   const roster = squads.types && squads.types.length ? squads.types : ['grunt','grunt','raider','elite'];
+  const rangeSource = Array.isArray(squads.total) ? squads.total
+                    : (Array.isArray(squads.size) ? squads.size : [2,6]);
+  let minCount = Math.floor(rangeSource[0] ?? 2);
+  let maxCount = Math.floor((rangeSource[1] ?? rangeSource[0]) ?? 6);
+  minCount = clamp(minCount, 2, 6);
+  maxCount = clamp(maxCount, minCount, 6);
+  const groups = Math.max(1, Math.floor(squads.perFaction ?? 1));
   for(const f of factions){
-    for(let s=0;s<squadsPerFaction;s++){
-      const squadSize = randi(sizeMin, sizeMax);
-      const center = { x: f.spawn.x + rand(-spread,spread), y: f.spawn.y + rand(-spread,spread) };
-      const type = choice(roster);
-      for(let i=0;i<squadSize;i++){
-        const ang = Math.random()*Math.PI*2, rad = rand(0,40);
-        const x = center.x + Math.cos(ang)*rad, y=center.y + Math.sin(ang)*rad;
-        spawnEnemy(f.id, type, x, y, true);
+    let remaining = randi(minCount, maxCount);
+    for(let g=0; g<groups; g++){
+      const slotsLeft = groups-g;
+      const maxForGroup = remaining - (slotsLeft-1);
+      const groupSize = g===groups-1 ? remaining : randi(1, Math.max(1, maxForGroup));
+      const center = {
+        x: f.spawn.x + rand(-spread, spread),
+        y: f.spawn.y + rand(-spread, spread)
+      };
+      for(let i=0;i<groupSize;i++){
+        const ang = Math.random()*Math.PI*2;
+        const rad = rand(0, Math.min(40, spread*0.6));
+        const x = center.x + Math.cos(ang)*rad;
+        const y = center.y + Math.sin(ang)*rad;
+        spawnEnemy(f.id, choice(roster), x, y, true);
       }
+      remaining -= groupSize;
+      if(remaining<=0) break;
     }
   }
 }
@@ -1320,6 +1333,19 @@ function renderCombat(now,dt){
   for(const e of enemies){
     const col=factions[e.team].color;
     neonCircle(e.x,e.y,e.r, col, 0.10, 16);
+    if(e.reloading && e.gun){
+      const pct = clamp(e.reloadProg / Math.max(1, e.gun.reload || 1), 0, 1);
+      ctx.save();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2.6;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = col;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r+10, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct, false);
+      ctx.stroke();
+      ctx.restore();
+    }
     if(e.hitFlash>0){
       const a=e.hitFlash/140;
       ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.shadowBlur=16; ctx.shadowColor='#ffffff';
