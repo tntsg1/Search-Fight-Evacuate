@@ -195,7 +195,7 @@ canvas#game{
   box-shadow:0 16px 30px rgba(0,0,0,.45);
 }
 .muted{opacity:.75;}
-.overlay{
+.overlay{ 
   position:fixed;
   inset:0;
   display:none;
@@ -205,6 +205,119 @@ canvas#game{
   padding:16px;
 }
 .overlay.show{display:grid;}
+.map-card-shell{
+  width:min(880px,92vw);
+  position:relative;
+}
+.map-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+}
+.map-card{
+  position:relative;
+  border-radius:18px;
+  padding:18px 18px 20px;
+  cursor:pointer;
+  border:1px solid rgba(48,76,132,.7);
+  background:linear-gradient(165deg,rgba(8,14,30,.92),rgba(11,20,44,.74));
+  box-shadow:0 26px 60px rgba(0,0,0,.55);
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+  overflow:hidden;
+}
+.map-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:20px;
+  background:radial-gradient(circle at 20% 20%,var(--accent-soft,rgba(0,247,255,.18)) 0%,rgba(0,0,0,0) 70%);
+  opacity:.65;
+  pointer-events:none;
+  filter:blur(0.5px);
+}
+.map-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  border:1px solid rgba(135,176,255,.14);
+  pointer-events:none;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.32);
+}
+.map-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 34px 70px rgba(0,0,0,.6);
+  border-color:color-mix(in srgb,var(--accent,#00f7ff) 60%,rgba(48,76,132,.7));
+}
+.map-card.active{
+  border-color:var(--accent,#00f7ff);
+  box-shadow:0 34px 90px rgba(0,0,0,.65),0 0 32px var(--accent-glow,rgba(0,247,255,.35));
+}
+.map-card h3{
+  margin:0;
+  font-size:18px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent,#00f7ff);
+  text-shadow:0 0 18px color-mix(in srgb,var(--accent,#00f7ff) 70%,rgba(0,0,0,0));
+}
+.map-card .subtitle{
+  margin-top:6px;
+  font-size:13px;
+  color:#d7e7ff;
+  opacity:.75;
+}
+.map-card .map-desc{
+  margin-top:12px;
+  font-size:13px;
+  line-height:1.6;
+  color:#c5dcff;
+  min-height:56px;
+}
+.map-card .tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.map-pill{
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(44,71,126,.8);
+  font-size:11px;
+  letter-spacing:.08em;
+  color:#d0e9ff;
+  background:linear-gradient(135deg,rgba(12,18,36,.85),rgba(10,16,32,.58));
+  text-transform:uppercase;
+}
+.map-card .footer{
+  margin-top:18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:12px;
+  color:#89b6ff;
+  opacity:.8;
+}
+.map-card .footer span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.map-card .footer svg{
+  width:16px;
+  height:16px;
+  fill:currentColor;
+  opacity:.85;
+}
+.map-actions .btn:first-child{
+  background:linear-gradient(135deg,rgba(0,247,255,.32),rgba(0,130,180,.68));
+  border-color:rgba(0,180,220,.65);
+  box-shadow:0 16px 36px rgba(0,247,255,.35);
+}
+.map-actions .btn:first-child:hover{
+  box-shadow:0 22px 46px rgba(0,247,255,.45);
+}
 .grid2{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(240px,1fr));

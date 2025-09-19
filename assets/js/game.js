@@ -14,6 +14,7 @@ const hud = {
 
 // Overlays
 const armoryUI = $('armoryUI'), warehouseUI = $('warehouseUI'), lootUI = $('lootUI'), cin = $('cin');
+const mapSelectUI = $('mapSelectUI'), mapList = $('mapList'), mapConfirm = $('mapConfirm'), mapCancel = $('mapCancel');
 // Armory controls
 const ammoRange=$('ammoRange'), ammoLabel=$('ammoLabel'), medkit=$('medkit'), armoryApply=$('armoryApply'), armoryClose=$('armoryClose'), billText=$('billText');
 // Warehouse controls
@@ -137,15 +138,15 @@ const baseWorld={w:1600,h:900}, baseCam={x:800,y:450};
 const baseZones={ armory:{x:350,y:450,r:90,label:'Armory'}, warehouse:{x:800,y:450,r:90,label:'Warehouse'}, runway:{x:1250,y:450,r:110,label:'Runway'} };
 const baseObstacles=(()=>{const a=[]; for(let i=0;i<22;i++) a.push({type:'circle',x:rand(120,baseWorld.w-120),y:rand(120,baseWorld.h-120),r:rand(30,70)}); return a;})();
 const world={w:3400,h:3400}, cam={x:1700,y:1700};
-const baseCityTerrain=createCityTerrain();
-let obstacles=baseCityTerrain.map(o=>({...o}));
-const exfilSpots=[
+const defaultExfilSpots=[
   {x:520,y:560,r:100},
   {x:1820,y:1840,r:110},
   {x:2620,y:1760,r:120},
   {x:2620,y:2960,r:130},
   {x:820,y:3000,r:120},
 ];
+let currentExfilPool=[...defaultExfilSpots];
+let obstacles=[];
 function circleHit(ax,ay,ar,bx,by,br){ return (ax-bx)*(ax-bx)+(ay-by)*(ay-by) <= (ar+br)*(ar+br); }
 function obstacleHitCircle(x,y,r,ob){
   if(ob.type==='circle'){ return circleHit(x,y,r,ob.x,ob.y,ob.r); }
@@ -187,81 +188,300 @@ function collideWithObstacles(o, obs, W,H){
   }
   o.x=clamp(o.x,o.r,W-o.r); o.y=clamp(o.y,o.r,H-o.r);
 }
-function createCityTerrain(){
-  const arr=[];
-  const addRect=(x,y,w,h,variant='residential')=>arr.push({type:'rect',x,y,w,h,variant});
-  const addCircle=(x,y,r,variant='ruin')=>arr.push({type:'circle',x,y,r,variant});
-
-  // 北部住宅区：低矮楼体 + 围墙庭院
-  addRect(780, 620, 320, 220, 'residential');
-  addRect(1140, 620, 320, 220, 'residential');
-  addRect(1500, 620, 320, 220, 'residential');
-  addRect(960, 880, 620, 70, 'fence');
-  addRect(780, 980, 300, 200, 'residential');
-  addRect(1140, 980, 300, 200, 'residential');
-  addRect(1500, 980, 300, 200, 'residential');
-  addRect(960, 1140, 620, 70, 'fence');
-  addRect(630, 940, 70, 420, 'wall');
-  addRect(1690, 940, 70, 420, 'wall');
-
-  // 中央废墟广场：坍塌建筑和焦黑残骸
-  addCircle(1880, 1380, 170, 'ruin');
-  addCircle(1700, 1540, 110, 'ruin');
-  addCircle(2060, 1540, 130, 'ruin');
-
-  // 西侧街区围墙，形成城市巷道
-  addRect(520, 1500, 420, 70, 'wall');
-  addRect(520, 1820, 420, 70, 'wall');
-  addRect(320, 1660, 70, 420, 'wall');
-  addCircle(640, 1700, 90, 'ruin');
-
-  // 南部住宅与庭院
-  addRect(780, 2320, 320, 240, 'residential');
-  addRect(1140, 2320, 320, 240, 'residential');
-  addRect(780, 2660, 320, 240, 'residential');
-  addRect(1140, 2700, 320, 260, 'residential');
-  addRect(960, 2500, 620, 80, 'fence');
-  addCircle(620, 2460, 110, 'ruin');
-
-  // 巷战走廊：双排高墙与拦阻物
-  addRect(1660, 2140, 70, 700, 'wall');
-  addRect(1920, 2140, 70, 700, 'wall');
-  addRect(1790, 2140, 260, 60, 'wall');
-  addRect(1670, 2380, 180, 60, 'wall');
-  addRect(1910, 2560, 180, 60, 'wall');
-  addCircle(1790, 2300, 90, 'ruin');
-  addCircle(1790, 2600, 120, 'ruin');
-
-  // 市区核心：密集楼体 + 围栏
-  addRect(2200, 2200, 320, 240, 'residential');
-  addRect(2200, 1880, 320, 180, 'residential');
-  addRect(2200, 1680, 320, 120, 'fence');
-  addRect(2380, 2080, 70, 320, 'wall');
-  addRect(2020, 2080, 70, 320, 'wall');
-
-  // 东北塔楼区：高层与连廊
-  addRect(2480, 760, 420, 320, 'tower');
-  addRect(2900, 720, 340, 360, 'tower');
-  addRect(2700, 1080, 520, 80, 'fence');
-  addCircle(2680, 620, 90, 'ruin');
-  addCircle(3160, 780, 120, 'ruin');
-
-  // 东南仓储 / 工业区
-  addRect(2600, 2320, 460, 260, 'warehouse');
-  addRect(3080, 2320, 360, 260, 'warehouse');
-  addRect(2840, 2660, 620, 110, 'wall');
-  addRect(2840, 2020, 620, 110, 'wall');
-  addCircle(2600, 2000, 120, 'ruin');
-  addCircle(3100, 2000, 130, 'ruin');
-
-  // 边缘废墟覆盖
-  addCircle(400, 360, 110, 'ruin');
-  addCircle(3200, 360, 140, 'ruin');
-  addCircle(400, 3200, 150, 'ruin');
-  addCircle(3200, 3200, 170, 'ruin');
-
-  return arr;
+function randomPoint(margin=360){
+  return { x:rand(margin, world.w-margin), y:rand(margin, world.h-margin) };
 }
+function randomEdgePoint(margin=340){
+  const side=Math.floor(Math.random()*4);
+  if(side===0) return {x:rand(margin, world.w-margin), y:rand(margin, margin+240)};
+  if(side===1) return {x:rand(margin, world.w-margin), y:rand(world.h-margin-240, world.h-margin)};
+  if(side===2) return {x:rand(margin, margin+240), y:rand(margin, world.h-margin)};
+  return {x:rand(world.w-margin-240, world.w-margin), y:rand(margin, world.h-margin)};
+}
+
+function generateCityMap(){
+  const obstacles=[];
+  const addRect=(x,y,w,h,variant='residential')=>obstacles.push({type:'rect',x,y,w,h,variant});
+  const addCircle=(x,y,r,variant='ruin')=>obstacles.push({type:'circle',x,y,r,variant});
+  const cx=world.w/2, cy=world.h/2;
+  const spacing=420;
+  for(let gx=-1; gx<=1; gx++){
+    for(let gy=-1; gy<=1; gy++){
+      if(Math.random()<0.18 && !(gx===0 && gy===0)) continue;
+      const variant=Math.random()<0.2?'tower':(Math.random()<0.38?'warehouse':'residential');
+      const w=rand(240,360), h=rand(210,320);
+      const px=clamp(cx + gx*spacing + rand(-70,70), w/2+160, world.w-w/2-160);
+      const py=clamp(cy + gy*spacing + rand(-70,70), h/2+160, world.h-h/2-160);
+      addRect(px,py,w,h,variant);
+      if(Math.random()<0.55){
+        const fenceW=w+rand(120,200);
+        const fenceH=rand(48,90);
+        const side=Math.random()<0.5?1:-1;
+        addRect(px, clamp(py + side*(h/2 + fenceH/2 + rand(24,52)), fenceH/2+140, world.h-fenceH/2-140), fenceW, fenceH, 'fence');
+      }
+      if(Math.random()<0.35){
+        addCircle(px + rand(-w*0.35,w*0.35), py + rand(-h*0.35,h*0.35), rand(60,110), 'ruin');
+      }
+    }
+  }
+  for(let i=0;i<3;i++){
+    const horizontal=Math.random()<0.5;
+    if(horizontal){
+      const w=rand(340,720), h=rand(60,90);
+      addRect(clamp(cx + rand(-600,600), w/2+120, world.w-w/2-120), clamp(cy + rand(-380,380), h/2+140, world.h-h/2-140), w, h, 'wall');
+    }else{
+      const w=rand(60,90), h=rand(340,720);
+      addRect(clamp(cx + rand(-380,380), w/2+140, world.w-w/2-140), clamp(cy + rand(-600,600), h/2+120, world.h-h/2-120), w, h, 'wall');
+    }
+  }
+  for(let i=0;i<4;i++){ const p=randomPoint(420); addCircle(p.x,p.y,rand(80,150),'ruin'); }
+  const industryX=clamp(cx + rand(520,700), 260, world.w-260);
+  const industryY=clamp(cy + rand(420,620), 260, world.h-260);
+  addRect(industryX, industryY, rand(320,420), rand(220,280), 'warehouse');
+  addRect(industryX + rand(220,320), industryY + rand(-20,60), rand(260,340), rand(200,260), 'warehouse');
+  addRect(industryX + rand(-40,60), industryY - rand(180,260), rand(520,620), rand(70,110), 'fence');
+  const plazas=[
+    {x:cx + rand(-280,280), y:cy + rand(-220,220)},
+    {x:cx + rand(-420,420), y:cy + rand(-420,420)},
+  ];
+  plazas.forEach(p=>addCircle(clamp(p.x,120,world.w-120), clamp(p.y,120,world.h-120), rand(70,120), 'ruin'));
+  const exfils=[];
+  for(let i=0;i<5;i++){ const p=randomEdgePoint(380); exfils.push({x:p.x,y:p.y,r:rand(95,140)}); }
+  const spawns=[
+    {x:rand(520,840), y:rand(world.h-760, world.h-540)},
+    {x:rand(world.w-820, world.w-540), y:rand(520,780)},
+    {x:rand(world.w-820, world.w-560), y:rand(world.h-820, world.h-560)},
+  ];
+  return {
+    obstacles,
+    exfils,
+    spawns,
+    squads:{perFaction:randi(3,5), size:[3,6], spread:220, types:['grunt','grunt','grunt','raider','elite']},
+    playerSpawn:{center:{x:cx,y:cy}, radius:240},
+    intro:'霓虹高楼夹击，注意巷战包抄与工业区伏击。'
+  };
+}
+
+function generateWildMap(){
+  const obstacles=[];
+  const addRect=(x,y,w,h,variant='camp')=>obstacles.push({type:'rect',x,y,w,h,variant});
+  const addCircle=(x,y,r,variant='forest')=>obstacles.push({type:'circle',x,y,r,variant});
+  for(let i=0;i<6;i++){ const p=randomPoint(420); addCircle(p.x,p.y,rand(120,190),'forest'); }
+  for(let i=0;i<4;i++){ const p=randomPoint(440); addCircle(p.x,p.y,rand(60,110),'boulder'); }
+  for(let i=0;i<3;i++){
+    const horizontal=Math.random()<0.5;
+    if(horizontal){ const p=randomPoint(500); addRect(p.x,p.y,rand(520,780),rand(70,120),'ridge'); }
+    else { const p=randomPoint(500); addRect(p.x,p.y,rand(70,120),rand(520,780),'ridge'); }
+  }
+  for(let i=0;i<2;i++){ const p=randomPoint(520); addCircle(p.x,p.y,rand(120,180),'lake'); }
+  for(let i=0;i<3;i++){ const p=randomPoint(520); addRect(p.x,p.y,rand(200,280),rand(160,220),'camp'); if(Math.random()<0.6){ addCircle(p.x+rand(-90,90), p.y+rand(-90,90), rand(50,80), 'boulder'); } }
+  const exfils=[];
+  for(let i=0;i<4;i++){ const p=randomEdgePoint(360); exfils.push({x:p.x,y:p.y,r:rand(100,150)}); }
+  const spawns=[
+    {x:rand(420,620), y:rand(world.h-660, world.h-420)},
+    {x:rand(world.w-660, world.w-420), y:rand(420,640)},
+    {x:rand(world.w-660, world.w-420), y:rand(world.h-660, world.h-420)},
+  ];
+  return {
+    obstacles,
+    exfils,
+    spawns,
+    squads:{perFaction:randi(2,4), size:[4,7], spread:320, types:['grunt','grunt','raider','grunt','elite']},
+    playerSpawn:{center:{x:world.w/2,y:world.h/2}, radius:320},
+    intro:'荒原地表开阔，善用树林与山脊断开敌火。'
+  };
+}
+
+function generateOutpostMap(){
+  const obstacles=[];
+  const addRect=(x,y,w,h,variant='warehouse')=>obstacles.push({type:'rect',x,y,w,h,variant});
+  const addCircle=(x,y,r,variant='reactor')=>obstacles.push({type:'circle',x,y,r,variant});
+  const cx=world.w/2, cy=world.h/2;
+  const coreW=rand(320,360), coreH=rand(240,280);
+  addRect(cx, cy, coreW, coreH, 'tower');
+  addRect(cx, cy, coreW+rand(160,220), rand(80,120), 'wall');
+  addRect(cx, cy, rand(90,120), coreH+rand(160,220), 'wall');
+  for(let i=0;i<2;i++){
+    const offset=rand(420,520);
+    addRect(cx+offset, cy+rand(-160,160), rand(320,420), rand(200,260), 'warehouse');
+    addRect(cx-offset, cy+rand(-160,160), rand(320,420), rand(200,260), 'warehouse');
+  }
+  for(let i=0;i<3;i++){
+    const angle=i*Math.PI*2/3 + Math.random()*0.25;
+    const dist=rand(420,560);
+    const px=clamp(cx + Math.cos(angle)*dist, 160, world.w-160);
+    const py=clamp(cy + Math.sin(angle)*dist, 160, world.h-160);
+    addCircle(px,py,rand(90,130),'reactor');
+    addCircle(px+rand(-120,120), py+rand(-120,120), rand(60,90),'relay');
+  }
+  for(let i=0;i<4;i++){
+    const p=randomEdgePoint(420);
+    addRect(p.x, p.y, rand(260,360), rand(160,220), 'barracks');
+    addCircle(p.x+rand(-110,110), p.y+rand(-110,110), rand(70,110), 'ruin');
+  }
+  for(let i=0;i<4;i++){
+    const axis=Math.random()<0.5;
+    if(axis){ const p=randomPoint(520); addRect(p.x,p.y,rand(520,680),rand(60,80),'fence'); }
+    else { const p=randomPoint(520); addRect(p.x,p.y,rand(60,80),rand(520,680),'fence'); }
+  }
+  const exfils=[];
+  for(let i=0;i<5;i++){ const p=randomEdgePoint(360); exfils.push({x:p.x,y:p.y,r:rand(110,150)}); }
+  const spawns=[
+    {x:rand(480,760), y:rand(world.h-720, world.h-520)},
+    {x:rand(world.w-760, world.w-520), y:rand(520,780)},
+    {x:rand(world.w-780, world.w-560), y:rand(world.h-760, world.h-520)},
+  ];
+  return {
+    obstacles,
+    exfils,
+    spawns,
+    squads:{perFaction:randi(3,5), size:[4,7], spread:260, types:['grunt','raider','raider','elite','elite']},
+    playerSpawn:{center:{x:cx,y:cy}, radius:260},
+    intro:'裂隙前哨遍布能量塔与重兵防守，准备硬仗。'
+  };
+}
+
+const mapTypes=[
+  {
+    id:'city',
+    name:'霓虹都市',
+    subtitle:'城市战 / 高密度掩体',
+    accent:'#00f7ff',
+    accentSoft:'rgba(0,247,255,0.22)',
+    accentGlow:'rgba(0,247,255,0.4)',
+    desc:'错综的高楼街区与工业围栏构成紧凑巷战，对角穿插与屋顶残骸提供多层次攻防。',
+    tags:['城区巷战','多重撤离','工业掩体'],
+    difficulty:'中等压力',
+    size:'3.4km²',
+    generate:generateCityMap
+  },
+  {
+    id:'wild',
+    name:'陨星荒原',
+    subtitle:'野战 / 开阔视野',
+    accent:'#ffd166',
+    accentSoft:'rgba(255,209,102,0.28)',
+    accentGlow:'rgba(255,209,102,0.36)',
+    desc:'陨坑、枯树林带与天然山脊交织，远距火力与机动突击并存，适合灵活推进。',
+    tags:['远距视野','天然掩体','流动撤离'],
+    difficulty:'机动高',
+    size:'3.4km²',
+    generate:generateWildMap
+  },
+  {
+    id:'outpost',
+    name:'裂隙前哨',
+    subtitle:'混合战 / 能量防线',
+    accent:'#ff1cf7',
+    accentSoft:'rgba(255,28,247,0.24)',
+    accentGlow:'rgba(255,28,247,0.4)',
+    desc:'前哨基地的重型仓储、能量反应塔与外圈兵营交织，精英巡逻密集、压制火力强。',
+    tags:['精英巡逻','能量护盾','多层结构'],
+    difficulty:'高压制',
+    size:'3.4km²',
+    generate:generateOutpostMap
+  }
+];
+
+let currentMapId=mapTypes[0].id;
+let currentMapSpec=mapTypes[0];
+let chosenMapId=currentMapId;
+let preflightActive=false;
+let preflightTimer=null;
+
+function getMapById(id){
+  return mapTypes.find(m=>m.id===id) || mapTypes[0];
+}
+
+function pickPlayerSpawn(def){
+  const center=def.center || {x:world.w/2,y:world.h/2};
+  const radius=def.radius ?? 220;
+  const spread=def.spread ?? radius;
+  const ang=Math.random()*Math.PI*2;
+  const dist=Math.random()*spread;
+  const x=clamp(center.x + Math.cos(ang)*dist, 200, world.w-200);
+  const y=clamp(center.y + Math.sin(ang)*dist, 200, world.h-200);
+  return {x,y};
+}
+
+function renderMapOptions(){
+  if(!mapList) return;
+  mapList.innerHTML='';
+  for(const spec of mapTypes){
+    const card=document.createElement('div');
+    card.className='map-card';
+    card.dataset.id=spec.id;
+    if(spec.accent) card.style.setProperty('--accent', spec.accent);
+    if(spec.accentSoft) card.style.setProperty('--accent-soft', spec.accentSoft);
+    if(spec.accentGlow) card.style.setProperty('--accent-glow', spec.accentGlow);
+    const tags=(spec.tags||[]).map(tag=>`<span class="map-pill">${tag}</span>`).join('');
+    card.innerHTML=`
+      <h3>${spec.name}</h3>
+      <div class="subtitle">${spec.subtitle||''}</div>
+      <div class="map-desc">${spec.desc||''}</div>
+      <div class="tags">${tags}</div>
+      <div class="footer">
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v8h8v2h-8v8h-2v-8H3v-2h8z"/></svg>${spec.difficulty||''}</span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.3 7 13 7 13s7-7.7 7-13c0-3.9-3.1-7-7-7zm0 9.5c-1.4 0-2.5-1.1-2.5-2.5S10.6 6.5 12 6.5s2.5 1.1 2.5 2.5S13.4 11.5 12 11.5z"/></svg>${spec.size||''}</span>
+      </div>
+    `;
+    card.onclick=()=>{ chooseMap(spec.id); };
+    mapList.appendChild(card);
+  }
+  updateActiveMapCards();
+}
+
+function updateActiveMapCards(){
+  if(!mapList) return;
+  [...mapList.children].forEach(card=>{
+    card.classList.toggle('active', card.dataset.id===chosenMapId);
+  });
+}
+
+function chooseMap(id){
+  chosenMapId=id;
+  currentMapSpec=getMapById(id);
+  updateActiveMapCards();
+}
+
+function openMapSelect(){
+  renderMapOptions();
+  chosenMapId=currentMapId;
+  currentMapSpec=getMapById(currentMapId);
+  updateActiveMapCards();
+  mapSelectUI.classList.add('show');
+  flashTip('选择任务地图，确认后起飞。');
+}
+
+function beginLaunchWithMap(id){
+  if(phase!=='base') return;
+  if(preflightActive){ flashTip('起飞倒计时进行中…'); return; }
+  preflightActive=true;
+  currentMapId=id;
+  currentMapSpec=getMapById(id);
+  let c=3;
+  flashTip(`起飞准备：T-${c}… // ${currentMapSpec.subtitle||currentMapSpec.name}`);
+  preflightTimer=setInterval(()=>{
+    c--;
+    if(c>0){
+      flashTip(`起飞准备：T-${c}… // ${currentMapSpec.subtitle||currentMapSpec.name}`);
+    }else{
+      clearInterval(preflightTimer); preflightTimer=null;
+      cinematic(1800,'takeoff', ()=>{ preflightActive=false; enterCombat(id); });
+    }
+  },600);
+}
+
+mapConfirm.onclick=()=>{
+  if(!chosenMapId){ flashTip('请选择想要降落的地图。'); return; }
+  mapSelectUI.classList.remove('show');
+  beginLaunchWithMap(chosenMapId);
+};
+
+mapCancel.onclick=()=>{
+  mapSelectUI.classList.remove('show');
+  flashTip('起飞取消，继续在基地整备。');
+};
 const terrainStyles={
   residential:{
     fill:'rgba(13,19,38,0.92)',
@@ -306,6 +526,57 @@ const terrainStyles={
     stroke:'rgba(255,209,102,0.62)',
     glow:24,
     accent:'rgba(255,209,102,0.3)'
+  },
+  forest:{
+    fill:'rgba(46,120,84,0.42)',
+    stroke:'rgba(120,248,167,0.7)',
+    glow:18,
+    accent:'rgba(104,248,167,0.35)'
+  },
+  boulder:{
+    fill:'rgba(120,134,160,0.34)',
+    stroke:'rgba(190,205,230,0.6)',
+    glow:16,
+    accent:'rgba(210,220,240,0.28)'
+  },
+  ridge:{
+    fill:'rgba(28,36,52,0.82)',
+    stroke:'rgba(140,180,255,0.55)',
+    glow:22,
+    bandSpacing:34,
+    bandColor:'rgba(140,180,255,0.2)'
+  },
+  lake:{
+    fill:'rgba(40,132,255,0.32)',
+    stroke:'rgba(64,180,255,0.68)',
+    glow:26,
+    accent:'rgba(140,220,255,0.3)'
+  },
+  camp:{
+    fill:'rgba(40,44,64,0.92)',
+    stroke:'rgba(255,157,102,0.6)',
+    glow:20,
+    bandSpacing:28,
+    bandColor:'rgba(255,157,102,0.22)'
+  },
+  reactor:{
+    fill:'rgba(255,28,247,0.26)',
+    stroke:'rgba(255,140,255,0.75)',
+    glow:32,
+    accent:'rgba(255,140,255,0.32)'
+  },
+  relay:{
+    fill:'rgba(40,200,255,0.25)',
+    stroke:'rgba(40,200,255,0.7)',
+    glow:26,
+    accent:'rgba(40,200,255,0.28)'
+  },
+  barracks:{
+    fill:'rgba(22,28,48,0.92)',
+    stroke:'rgba(255,209,102,0.5)',
+    glow:22,
+    bandSpacing:22,
+    bandColor:'rgba(255,209,102,0.2)'
   }
 };
 terrainStyles.defaultRect=terrainStyles.residential;
@@ -394,7 +665,8 @@ const factions=[
   {id:1,name:'Magenta',color:'#ff1cf7',spawn:{x:3000,y:520}},
   {id:2,name:'Amber',color:'#ffd166',spawn:{x:3000,y:3000}},
 ];
-let exfil={...exfilSpots[0]};
+const defaultFactionSpawns=factions.map(f=>({...f.spawn}));
+let exfil={...defaultExfilSpots[0]};
 
 /* ======= Player & Inventory ======= */
 const rarColors={common:'#b7c2d1',uncommon:'#68f8a7',rare:'#45c7ff',epic:'#ff84ff',legendary:'#ffd166'};
@@ -591,21 +863,31 @@ function cinematic(duration=1800, dir='takeoff', cb=()=>{}){
 
 /* ======= Match Flow ======= */
 function startPreflight(){
-  if(phase!=='base') return;
-  flashTip('起飞准备：T-3…'); let c=3;
-  const iv=setInterval(()=>{ c--; if(c>0) flashTip('起飞准备：T-'+c+'…'); else { clearInterval(iv); cinematic(1800,'takeoff', enterCombat); } }, 600);
+  if(phase!=='base' || preflightActive) return;
+  openMapSelect();
 }
-function resetBattlefield(){
+function resetBattlefield(config){
   lootBags.length=0; enemies.length=0;
-  const spot = choice(exfilSpots);
+  currentExfilPool = (config && config.exfils && config.exfils.length)? config.exfils : defaultExfilSpots;
+  const spot = choice(currentExfilPool);
   exfil.x = spot.x; exfil.y = spot.y; exfil.r = spot.r;
-  obstacles = baseCityTerrain.map(o=>({...o}));
-  const squadsPerFaction = 4;
+  obstacles = (config && config.obstacles?config.obstacles:[]).map(o=>({...o}));
+  const spawns = (config && config.spawns && config.spawns.length)? config.spawns : defaultFactionSpawns;
+  factions.forEach((f,idx)=>{
+    const base = spawns[idx] || defaultFactionSpawns[idx] || f.spawn;
+    f.spawn = {...base};
+  });
+  const squads = config && config.squads ? config.squads : {};
+  const squadsPerFaction = squads.perFaction ?? 4;
+  const spread = squads.spread ?? 200;
+  const sizeMin = (squads.size && squads.size[0]) ?? 3;
+  const sizeMax = (squads.size && squads.size[1]) ?? 6;
+  const roster = squads.types && squads.types.length ? squads.types : ['grunt','grunt','raider','elite'];
   for(const f of factions){
     for(let s=0;s<squadsPerFaction;s++){
-      const squadSize = randi(3,6);
-      const center = { x: f.spawn.x + rand(-160,160), y: f.spawn.y + rand(-160,160) };
-      const type = choice(['grunt','grunt','raider','elite']);
+      const squadSize = randi(sizeMin, sizeMax);
+      const center = { x: f.spawn.x + rand(-spread,spread), y: f.spawn.y + rand(-spread,spread) };
+      const type = choice(roster);
       for(let i=0;i<squadSize;i++){
         const ang = Math.random()*Math.PI*2, rad = rand(0,40);
         const x = center.x + Math.cos(ang)*rad, y=center.y + Math.sin(ang)*rad;
@@ -614,18 +896,23 @@ function resetBattlefield(){
     }
   }
 }
-function enterCombat(){
+function enterCombat(mapId){
+  const spec = getMapById(mapId||currentMapId);
+  currentMapSpec = spec;
+  const config = spec.generate();
   phase='combat'; hud.phase.textContent='COMBAT'; player.alive=true; player.hp=100; hud.hpFill.style.width=player.hp+'%'; hud.hpText.textContent=player.hp;
   player.kills=0; hud.kills.textContent=0;
-  resetBattlefield();
-  player.x = rand(700, world.w-700); player.y = rand(700, world.h-700);
+  resetBattlefield(config);
+  const spawn = config.playerSpawn?.center ? pickPlayerSpawn(config.playerSpawn) : { x: rand(700, world.w-700), y: rand(700, world.h-700) };
+  player.x = spawn.x; player.y = spawn.y;
   cam.x=player.x; cam.y=player.y;
-  flashTip('已抵达战场：搜刮→撤离点。本局敌人数量已锁定；阵营互相开火！');
+  flashTip(`已抵达${spec.name}：${config.intro || spec.desc || '搜刮→撤离点，活着回来。'}`);
 }
 function returnToBase(){
   cinematic(1600,'land', ()=>{
     phase='base'; hud.phase.textContent='BASE';
     player.x=baseWorld.w/2; player.y=baseWorld.h/2;
+    preflightActive=false;
     flashTip('已返航：去仓库出售战利品，或军械库买装备后再起飞。');
   });
 }

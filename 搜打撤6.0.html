@@ -37,6 +37,19 @@
 <div class="corner"><div class="fps" id="fps">FPS 0</div></div>
 <div class="tip" id="tip">基地：WASD移动，E交互（军械库/仓库/起飞区），B背包。战场：左键射击/挥砍，R换弹，F打药，E开箱/撤离。</div>
 
+<!-- 地图选择 -->
+<div class="overlay" id="mapSelectUI">
+  <div class="card map-card-shell">
+    <h2>任务部署 · 选择地形</h2>
+    <p class="muted" style="margin-bottom:16px">挑选你想降落的战区风格，确认后将启动倒计时并随机生成对应地形。</p>
+    <div class="map-grid" id="mapList"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px" class="map-actions">
+      <button class="btn" id="mapConfirm">锁定并起飞</button>
+      <button class="btn" id="mapCancel">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- 军械库（购买+装配） -->
 <div class="overlay" id="armoryUI">
   <div class="card" style="width:min(820px,92vw)">
